@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import type { Room, CollectionItem } from "../types";
 import "./RoomVisualization.scss";
 
@@ -19,7 +19,10 @@ function RoomVisualization({
 }: RoomVisualizationProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const draggedItemRef = useRef<{ item: CollectionItem; fromSidebar: boolean } | null>(null);
+  const draggedItemRef = useRef<{
+    item: CollectionItem;
+    fromSidebar: boolean;
+  } | null>(null);
 
   const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,7 +82,7 @@ function RoomVisualization({
       draggedItemRef.current = null;
       return;
     }
-    
+
     const pos = getCanvasPosition(e.clientX, e.clientY);
     if (pos && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
@@ -216,4 +219,3 @@ function RoomVisualization({
 }
 
 export default RoomVisualization;
-
