@@ -1,8 +1,11 @@
+.modal-body {
+  padding: 1rem;
+}
+
 .room-order-list {
-  padding: 1.5rem 2.5rem;
+  padding: 0;
   max-height: 450px;
   overflow-y: auto;
-  background: rgba(255, 255, 255, 0.3);
 
   &::-webkit-scrollbar {
     width: 8px;
@@ -118,9 +121,17 @@
 }
 
 @media (max-width: 768px) {
+  .modal-body {
+    padding: 1rem;
+  }
+
   .room-order-list {
-    padding: 1.25rem;
+    padding: 0;
     max-height: 400px;
+  }
+
+  .modal-actions {
+    padding: 1rem;
   }
 
   .room-order-item {

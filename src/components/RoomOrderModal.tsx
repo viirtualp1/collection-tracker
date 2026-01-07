@@ -72,26 +72,28 @@ function RoomOrderModal({ rooms, onSave, onClose }: RoomOrderModalProps) {
           </button>
         </div>
 
-        <div className="room-order-list">
-          {draggedRooms.map((room, index) => (
-            <div
-              key={room.id}
-              className={`room-order-item ${
-                draggedIndex === index ? "dragging" : ""
-              } ${dragOverIndex === index ? "drag-over" : ""}`}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="drag-handle">☰</div>
-              <span className="room-order-icon">{room.icon || "🏠"}</span>
-              <span className="room-order-name">{room.name}</span>
-              <span className="room-order-number">{index + 1}</span>
-            </div>
-          ))}
+        <div className="modal-body">
+          <div className="room-order-list">
+            {draggedRooms.map((room, index) => (
+              <div
+                key={room.id}
+                className={`room-order-item ${
+                  draggedIndex === index ? "dragging" : ""
+                } ${dragOverIndex === index ? "drag-over" : ""}`}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="drag-handle">☰</div>
+                <span className="room-order-icon">{room.icon || "🏠"}</span>
+                <span className="room-order-name">{room.name}</span>
+                <span className="room-order-number">{index + 1}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="modal-actions">

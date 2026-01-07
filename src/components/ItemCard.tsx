@@ -7,8 +7,22 @@ interface ItemCardProps {
 }
 
 function ItemCard({ item, onClick }: ItemCardProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <div className="item-card" onClick={onClick}>
+    <div
+      className="item-card"
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`Edit ${item.name}`}
+    >
       <div className="item-image">
         {item.imageUrl ? (
           <img src={item.imageUrl} alt={item.name} />
