@@ -7,7 +7,7 @@ A modern web application for tracking your collections organized by rooms, built
 - 🏠 **Room Management**: Create and organize rooms with custom icons
 - 📦 **Item Tracking**: Add items to rooms with descriptions and images
 - 🎨 **Visual Mode**: Drag and drop items on room backgrounds
-- 🔐 **Authentication**: Sign in with Email, Google, or GitHub
+- 🔐 **Authentication**: Sign in with Email (OAuth temporarily disabled)
 - 💬 **Feedback**: Send feedback directly to the developer
 - 📱 **Responsive**: Works on desktop, tablet, and mobile devices
 
@@ -21,23 +21,34 @@ A modern web application for tracking your collections organized by rooms, built
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd collection-tracker
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Set up environment variables:
-```bash
-cp .env.example .env
+
+**For Local Testing (Mock Data)**:
+Create a `.env` file with:
+
+```
+VITE_USE_MOCK_DATA=true
 ```
 
-Edit `.env` and add your Supabase credentials:
+This enables mock data mode - no Supabase setup required! You can test all features with pre-populated rooms and items.
+
+**For Production (Supabase)**:
+Create a `.env` file with:
+
 ```
+VITE_USE_MOCK_DATA=false
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
@@ -47,15 +58,18 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 1. Create a new Supabase project at [supabase.com](https://supabase.com)
 
 2. Run the database migration:
+
    - Go to SQL Editor in Supabase Dashboard
    - Copy and run the contents of `supabase/migrations/001_initial_schema.sql`
 
 3. Enable OAuth providers (optional):
+
    - Go to Authentication > Providers
    - Enable Google and/or GitHub
    - Add redirect URLs: `http://localhost:5173/auth/callback` (dev) and your production URL
 
 4. Set up Edge Function for feedback (optional):
+
    - Install Supabase CLI: `npm install -g supabase`
    - Login: `supabase login`
    - Link project: `supabase link --project-ref your-project-ref`
@@ -65,6 +79,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    Or use Resend API directly in the function code.
 
 5. Create `.env.local` for local development:
+
 ```
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -113,6 +128,7 @@ src/
 ## Database Schema
 
 ### Rooms Table
+
 - `id` (UUID, Primary Key)
 - `user_id` (UUID, Foreign Key to auth.users)
 - `name` (TEXT)
@@ -123,6 +139,7 @@ src/
 - `updated_at` (TIMESTAMPTZ)
 
 ### Items Table
+
 - `id` (UUID, Primary Key)
 - `user_id` (UUID, Foreign Key to auth.users)
 - `room_id` (UUID, Foreign Key to rooms)

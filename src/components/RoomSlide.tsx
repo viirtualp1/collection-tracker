@@ -8,8 +8,6 @@ interface RoomSlideProps {
   onAddItem: () => void;
   onEditItem: (item: CollectionItem) => void;
   onEditRoom: (room: Room) => void;
-  onAddRoom: () => void;
-  onEditOrder: () => void;
   onVisualize: () => void;
 }
 
@@ -19,8 +17,6 @@ function RoomSlide({
   onAddItem,
   onEditItem,
   onEditRoom,
-  onAddRoom,
-  onEditOrder,
   onVisualize,
 }: RoomSlideProps) {
   return (
@@ -33,36 +29,20 @@ function RoomSlide({
         </div>
         <div className="room-header-actions">
           <button
+            className="room-action-button edit"
+            onClick={() => onEditRoom(room)}
+            aria-label="Edit room"
+            title="Edit room"
+          >
+            ✏️ Edit
+          </button>
+          <button
             className="room-action-button visualize"
             onClick={onVisualize}
             aria-label="Visual representation"
             title="Visual representation"
           >
             🎨 Visual
-          </button>
-          <button
-            className="room-action-button edit-order"
-            onClick={onEditOrder}
-            aria-label="Edit room order"
-            title="Edit order"
-          >
-            Edit Order
-          </button>
-          <button
-            className="room-action-button edit"
-            onClick={() => onEditRoom(room)}
-            aria-label="Edit room"
-            title="Edit room"
-          >
-            ✏️
-          </button>
-          <button
-            className="room-action-button add"
-            onClick={onAddRoom}
-            aria-label="Add room"
-            title="Add room"
-          >
-            +
           </button>
         </div>
       </div>

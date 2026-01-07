@@ -3,15 +3,17 @@ import type { Room, CollectionItem } from "./types";
 import RoomSlide from "./components/RoomSlide";
 import ItemModal from "./components/ItemModal";
 import RoomModal from "./components/RoomModal";
-import RoomOrderModal from "./components/RoomOrderModal";
 import RoomVisualization from "./components/RoomVisualization";
 import Auth from "./components/Auth";
 import FeedbackButton from "./components/FeedbackButton";
 import { authService } from "./lib/auth";
 import { roomsService } from "./lib/rooms";
 import { itemsService } from "./lib/items";
+import { mockRooms, mockItems, mockUser } from "./lib/mockData";
 import type { User } from "@supabase/supabase-js";
 import "./App.scss";
+
+const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === "true";
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -23,13 +25,23 @@ function App() {
   const [editingItem, setEditingItem] = useState<CollectionItem | null>(null);
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [isRoomOrderModalOpen, setIsRoomOrderModalOpen] = useState(false);
   const [isVisualizationMode, setIsVisualizationMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async (userId: string) => {
     try {
       setError(null);
+
+      if (USE_MOCK_DATA) {
+        setRooms(mockRooms);
+        setItems(mockItems);
+        setCurrentRoomIndex((prev) => {
+          if (mockRooms.length === 0) return 0;
+          return prev >= mockRooms.length ? 0 : prev;
+        });
+        return;
+      }
+
       const [roomsData, itemsData] = await Promise.all([
         roomsService.getAll(userId),
         itemsService.getAll(userId),
@@ -51,6 +63,12 @@ function App() {
   useEffect(() => {
     const checkUser = async () => {
       try {
+        if (USE_MOCK_DATA) {
+          setUser(mockUser as unknown as User);
+          setLoading(false);
+          return;
+        }
+
         const session = await authService.getSession();
         if (session?.user) {
           setUser(session.user);
@@ -64,19 +82,25 @@ function App() {
 
     checkUser();
 
-    const unsubscribe = authService.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        setUser(session.user);
-        await loadData(session.user.id);
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        setRooms([]);
-        setItems([]);
-        setCurrentRoomIndex(0);
-      } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        setUser(session.user);
+    if (USE_MOCK_DATA) {
+      return;
+    }
+
+    const unsubscribe = authService.onAuthStateChange(
+      async (event, session) => {
+        if (event === "SIGNED_IN" && session?.user) {
+          setUser(session.user);
+          await loadData(session.user.id);
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+          setRooms([]);
+          setItems([]);
+          setCurrentRoomIndex(0);
+        } else if (event === "TOKEN_REFRESHED" && session?.user) {
+          setUser(session.user);
+        }
       }
-    });
+    );
 
     return () => unsubscribe();
   }, [loadData]);
@@ -96,6 +120,10 @@ function App() {
   };
 
   const handleSignOut = async () => {
+    if (USE_MOCK_DATA) {
+      window.location.reload();
+      return;
+    }
     await authService.signOut();
   };
 
@@ -105,17 +133,13 @@ function App() {
     (item) => item.roomId === currentRoom?.id
   );
 
-  const handlePrevRoom = () => {
-    setCurrentRoomIndex((prev) =>
-      prev === 0 ? sortedRooms.length - 1 : prev - 1
-    );
-  };
-
-  const handleNextRoom = () => {
-    setCurrentRoomIndex((prev) =>
-      prev === sortedRooms.length - 1 ? 0 : prev + 1
-    );
-  };
+  const roomsItems: Record<string, CollectionItem[]> = {};
+  items.forEach((item) => {
+    if (!roomsItems[item.roomId]) {
+      roomsItems[item.roomId] = [];
+    }
+    roomsItems[item.roomId].push(item);
+  });
 
   const handleAddItem = () => {
     setEditingItem(null);
@@ -133,13 +157,42 @@ function App() {
     if (!user || !currentRoom) return;
 
     try {
+      if (USE_MOCK_DATA) {
+        if (editingItem) {
+          setItems((prev) =>
+            prev.map((i) =>
+              i.id === editingItem.id ? { ...editingItem, ...item } : i
+            )
+          );
+        } else {
+          const newItem: CollectionItem = {
+            ...item,
+            id: `item-${Date.now()}`,
+            roomId: currentRoom.id,
+            createdAt: new Date(),
+          };
+          setItems((prev) => [...prev, newItem]);
+        }
+        setIsModalOpen(false);
+        setEditingItem(null);
+        return;
+      }
+
       if (editingItem) {
-        const updated = await itemsService.update(editingItem.id, item, user.id);
+        const updated = await itemsService.update(
+          editingItem.id,
+          item,
+          user.id
+        );
         setItems((prev) =>
           prev.map((i) => (i.id === editingItem.id ? updated : i))
         );
       } else {
-        const newItem = await itemsService.create(item, user.id, currentRoom.id);
+        const newItem = await itemsService.create(
+          item,
+          user.id,
+          currentRoom.id
+        );
         setItems((prev) => [...prev, newItem]);
       }
       setIsModalOpen(false);
@@ -154,6 +207,13 @@ function App() {
     if (!user) return;
 
     try {
+      if (USE_MOCK_DATA) {
+        setItems((prev) => prev.filter((i) => i.id !== itemId));
+        setIsModalOpen(false);
+        setEditingItem(null);
+        return;
+      }
+
       await itemsService.delete(itemId, user.id);
       setItems((prev) => prev.filter((i) => i.id !== itemId));
       setIsModalOpen(false);
@@ -183,6 +243,34 @@ function App() {
     if (!user) return;
 
     try {
+      if (USE_MOCK_DATA) {
+        if (editingRoom) {
+          setRooms((prev) =>
+            prev.map((r) =>
+              r.id === editingRoom.id ? { ...editingRoom, ...roomData } : r
+            )
+          );
+        } else {
+          const newRoom: Room = {
+            ...roomData,
+            id: `room-${Date.now()}`,
+            order: rooms.length,
+          };
+          setRooms((prev) => {
+            const updated = [...prev, newRoom];
+            const sorted = [...updated].sort((a, b) => a.order - b.order);
+            const newIndex = sorted.findIndex((r) => r.id === newRoom.id);
+            if (newIndex !== -1) {
+              setCurrentRoomIndex(newIndex);
+            }
+            return updated;
+          });
+        }
+        setIsRoomModalOpen(false);
+        setEditingRoom(null);
+        return;
+      }
+
       if (editingRoom) {
         const updated = await roomsService.update(
           editingRoom.id,
@@ -216,6 +304,23 @@ function App() {
     if (!user) return;
 
     try {
+      if (USE_MOCK_DATA) {
+        setRooms((prev) => {
+          const filtered = prev.filter((r) => r.id !== roomId);
+          const sorted = [...filtered].sort((a, b) => a.order - b.order);
+          if (currentRoomIndex >= sorted.length && sorted.length > 0) {
+            setCurrentRoomIndex(sorted.length - 1);
+          } else if (sorted.length === 0) {
+            setCurrentRoomIndex(0);
+          }
+          return filtered;
+        });
+        setItems((prev) => prev.filter((i) => i.roomId !== roomId));
+        setIsRoomModalOpen(false);
+        setEditingRoom(null);
+        return;
+      }
+
       await roomsService.delete(roomId, user.id);
       setRooms((prev) => {
         const filtered = prev.filter((r) => r.id !== roomId);
@@ -233,29 +338,6 @@ function App() {
     } catch (err) {
       console.error("Error deleting room:", err);
       setError(err instanceof Error ? err.message : "Failed to delete room");
-    }
-  };
-
-  const handleEditOrder = () => {
-    setIsRoomOrderModalOpen(true);
-  };
-
-  const handleSaveRoomOrder = async (reorderedRooms: Room[]) => {
-    if (!user) return;
-
-    try {
-      const updated = await roomsService.updateOrder(reorderedRooms, user.id);
-      setRooms(updated);
-      const currentRoomId = currentRoom?.id;
-      if (currentRoomId) {
-        const newIndex = updated.findIndex((r) => r.id === currentRoomId);
-        if (newIndex !== -1) {
-          setCurrentRoomIndex(newIndex);
-        }
-      }
-    } catch (err) {
-      console.error("Error updating room order:", err);
-      setError(err instanceof Error ? err.message : "Failed to update order");
     }
   };
 
@@ -280,6 +362,15 @@ function App() {
     if (!user) return;
 
     try {
+      if (USE_MOCK_DATA) {
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId ? { ...item, position: { x, y } } : item
+          )
+        );
+        return;
+      }
+
       const updated = await itemsService.updatePosition(
         itemId,
         { x, y },
@@ -297,6 +388,15 @@ function App() {
     if (!currentRoom || !user) return;
 
     try {
+      if (USE_MOCK_DATA) {
+        setRooms((prev) =>
+          prev.map((room) =>
+            room.id === currentRoom.id ? { ...room, backgroundImage } : room
+          )
+        );
+        return;
+      }
+
       const updated = await roomsService.update(
         currentRoom.id,
         { backgroundImage },
@@ -326,7 +426,7 @@ function App() {
 
   if (isVisualizationMode && currentRoom) {
     return (
-      <>
+      <main className="app visualization-mode">
         <RoomVisualization
           room={currentRoom}
           items={currentRoomItems}
@@ -334,8 +434,7 @@ function App() {
           onUpdateItemPosition={handleUpdateItemPosition}
           onUpdateRoomBackground={handleUpdateRoomBackground}
         />
-        <FeedbackButton />
-      </>
+      </main>
     );
   }
 
@@ -348,21 +447,41 @@ function App() {
             <button onClick={() => setError(null)}>×</button>
           </div>
         )}
-        <div className="empty-state">
-          <h2>No rooms yet</h2>
-          <button className="add-room-button" onClick={handleAddRoom}>
-            + Add First Room
-          </button>
+        <aside className="app-sidebar">
+          <div className="sidebar-header">
+            <h1 className="sidebar-logo">Collection Tracker</h1>
+          </div>
+          <div className="sidebar-profile">
+            <div className="profile-avatar">
+              {user.email?.[0].toUpperCase()}
+            </div>
+            <div className="profile-info">
+              <div className="profile-email">{user.email}</div>
+              <button className="sign-out-link" onClick={handleSignOut}>
+                Sign Out
+              </button>
+            </div>
+          </div>
+          <div className="sidebar-actions">
+            <FeedbackButton />
+          </div>
+        </aside>
+        <div className="app-content">
+          <div className="empty-state">
+            <h2>No rooms yet</h2>
+            <button className="add-room-button" onClick={handleAddRoom}>
+              + Add First Room
+            </button>
+          </div>
+          {isRoomModalOpen && (
+            <RoomModal
+              room={editingRoom}
+              onSave={handleSaveRoom}
+              onDelete={editingRoom ? handleDeleteRoom : undefined}
+              onClose={handleCloseRoomModal}
+            />
+          )}
         </div>
-        {isRoomModalOpen && (
-          <RoomModal
-            room={editingRoom}
-            onSave={handleSaveRoom}
-            onDelete={editingRoom ? handleDeleteRoom : undefined}
-            onClose={handleCloseRoomModal}
-          />
-        )}
-        <FeedbackButton />
       </main>
     );
   }
@@ -376,116 +495,87 @@ function App() {
         </div>
       )}
 
-      <div className="app-header">
-        <div className="user-info">
-          <span className="user-email">{user.email}</span>
-          <button className="sign-out-button" onClick={handleSignOut}>
-            Sign Out
-          </button>
+      <aside className="app-sidebar">
+        <div className="sidebar-header">
+          <h1 className="sidebar-logo">Collection Tracker</h1>
         </div>
-      </div>
-
-      <div className="slider-container">
-        <RoomSlide
-          room={currentRoom}
-          items={currentRoomItems}
-          onAddItem={handleAddItem}
-          onEditItem={handleEditItem}
-          onEditRoom={handleEditRoom}
-          onAddRoom={handleAddRoom}
-          onEditOrder={handleEditOrder}
-          onVisualize={handleVisualize}
-        />
-      </div>
-
-      <div className="bottom-controls">
-        <button
-          className="nav-button prev"
-          onClick={handlePrevRoom}
-          aria-label="Previous room"
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M15 18L9 12L15 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-
-        <div className="room-indicators">
-          {sortedRooms.map((room, index) => (
+        <div className="sidebar-profile">
+          <div className="profile-avatar">{user.email?.[0].toUpperCase()}</div>
+          <div className="profile-info">
+            <div className="profile-email">{user.email}</div>
+            <button className="sign-out-link" onClick={handleSignOut}>
+              Sign Out
+            </button>
+          </div>
+        </div>
+        <div className="sidebar-rooms">
+          <div className="sidebar-rooms-header">
+            <h2 className="sidebar-rooms-title">Rooms</h2>
             <button
-              key={room.id}
-              className={`indicator ${
-                index === currentRoomIndex ? "active" : ""
-              }`}
-              onClick={() => setCurrentRoomIndex(index)}
-              aria-label={`Go to ${room.name}`}
-            />
-          ))}
+              className="sidebar-add-room-button"
+              onClick={handleAddRoom}
+              aria-label="Add room"
+              title="Add room"
+            >
+              +
+            </button>
+          </div>
+          <div className="rooms-list">
+            {sortedRooms.map((room, index) => (
+              <button
+                key={room.id}
+                className={`room-list-item ${
+                  index === currentRoomIndex ? "active" : ""
+                }`}
+                onClick={() => setCurrentRoomIndex(index)}
+                aria-label={`Go to ${room.name}`}
+              >
+                <span className="room-list-icon">{room.icon}</span>
+                <span className="room-list-name">{room.name}</span>
+                <span className="room-list-count">
+                  {roomsItems[room.id]?.length || 0}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="sidebar-actions">
+          <FeedbackButton />
+        </div>
+      </aside>
+
+      <div className="app-content">
+        <div className="slider-container">
+          <RoomSlide
+            room={currentRoom}
+            items={currentRoomItems}
+            onAddItem={handleAddItem}
+            onEditItem={handleEditItem}
+            onEditRoom={handleEditRoom}
+            onVisualize={handleVisualize}
+          />
         </div>
 
-        <button
-          className="nav-button next"
-          onClick={handleNextRoom}
-          aria-label="Next room"
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9 18L15 12L9 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        {isModalOpen && (
+          <ItemModal
+            key={editingItem?.id ?? "new"}
+            item={editingItem}
+            onSave={handleSaveItem}
+            onDelete={editingItem ? handleDeleteItem : undefined}
+            onClose={handleCloseModal}
+          />
+        )}
+
+        {isRoomModalOpen && (
+          <RoomModal
+            key={editingRoom?.id ?? "new"}
+            room={editingRoom}
+            onSave={handleSaveRoom}
+            onDelete={editingRoom ? handleDeleteRoom : undefined}
+            onClose={handleCloseRoomModal}
+          />
+        )}
       </div>
-
-      {isModalOpen && (
-        <ItemModal
-          key={editingItem?.id ?? "new"}
-          item={editingItem}
-          onSave={handleSaveItem}
-          onDelete={editingItem ? handleDeleteItem : undefined}
-          onClose={handleCloseModal}
-        />
-      )}
-
-      {isRoomModalOpen && (
-        <RoomModal
-          key={editingRoom?.id ?? "new"}
-          room={editingRoom}
-          onSave={handleSaveRoom}
-          onDelete={editingRoom ? handleDeleteRoom : undefined}
-          onClose={handleCloseRoomModal}
-        />
-      )}
-
-      {isRoomOrderModalOpen && (
-        <RoomOrderModal
-          rooms={rooms}
-          onSave={handleSaveRoomOrder}
-          onClose={() => setIsRoomOrderModalOpen(false)}
-        />
-      )}
-
-      <FeedbackButton />
     </main>
   );
 }

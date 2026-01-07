@@ -46,25 +46,26 @@ function Auth({ onAuthSuccess }: AuthProps) {
     }
   };
 
-  const handleOAuth = async (provider: "google" | "github") => {
-    setLoading(true);
-    setError(null);
+  // OAuth temporarily disabled
+  // const handleOAuth = async (provider: "google" | "github") => {
+  //   setLoading(true);
+  //   setError(null);
 
-    try {
-      const result =
-        provider === "google"
-          ? await authService.signInWithGoogle()
-          : await authService.signInWithGitHub();
+  //   try {
+  //     const result =
+  //       provider === "google"
+  //         ? await authService.signInWithGoogle()
+  //         : await authService.signInWithGitHub();
 
-      if (result.error) {
-        setError(result.error.message);
-        setLoading(false);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setLoading(false);
-    }
-  };
+  //     if (result.error) {
+  //       setError(result.error.message);
+  //       setLoading(false);
+  //     }
+  //   } catch (err) {
+  //     setError(err instanceof Error ? err.message : "An error occurred");
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleResetPassword = async (e: FormEvent) => {
     e.preventDefault();
@@ -88,12 +89,41 @@ function Auth({ onAuthSuccess }: AuthProps) {
 
   return (
     <div className="auth-container">
+      <div className="auth-hero">
+        <h1 className="hero-title">Collection Tracker</h1>
+        <p className="hero-subtitle">
+          Organize and visualize your collections with ease
+        </p>
+
+        <div className="hero-features">
+          <div className="feature">
+            <div className="feature-icon">🏠</div>
+            <h3>Organize by Rooms</h3>
+            <p>Create custom rooms and categorize your items efficiently</p>
+          </div>
+          <div className="feature">
+            <div className="feature-icon">📦</div>
+            <h3>Track Everything</h3>
+            <p>Add photos, descriptions, and details to your collectibles</p>
+          </div>
+          <div className="feature">
+            <div className="feature-icon">🎨</div>
+            <h3>Visual Layout</h3>
+            <p>Arrange items on a canvas to match your real-world setup</p>
+          </div>
+        </div>
+      </div>
+
       <div className="auth-card">
-        <h1 className="auth-title">Collection Tracker</h1>
+        <h2 className="auth-title">
+          {mode === "signin" && "Sign In"}
+          {mode === "signup" && "Sign Up"}
+          {mode === "reset" && "Reset Password"}
+        </h2>
         <p className="auth-subtitle">
-          {mode === "signin" && "Sign in to your account"}
-          {mode === "signup" && "Create a new account"}
-          {mode === "reset" && "Reset your password"}
+          {mode === "signin" && "Welcome back! Sign in to continue"}
+          {mode === "signup" && "Create your account to get started"}
+          {mode === "reset" && "Enter your email to reset password"}
         </p>
 
         {error && (
@@ -174,7 +204,8 @@ function Auth({ onAuthSuccess }: AuthProps) {
           </form>
         )}
 
-        {mode !== "reset" && (
+        {/* OAuth temporarily disabled */}
+        {/* {mode !== "reset" && (
           <>
             <div className="auth-divider">
               <span>or</span>
@@ -226,7 +257,7 @@ function Auth({ onAuthSuccess }: AuthProps) {
               </button>
             </div>
           </>
-        )}
+        )} */}
 
         <div className="auth-footer">
           {mode === "signin" && (

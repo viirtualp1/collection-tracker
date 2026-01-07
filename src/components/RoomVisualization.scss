@@ -244,11 +244,23 @@
     position: absolute;
     cursor: move;
     user-select: none;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 10;
 
+    &.react-draggable-dragging {
+      z-index: 100;
+      cursor: grabbing;
+    }
+
+    .canvas-item-handle {
+      cursor: move;
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+
     &:hover {
-      transform: scale(1.05);
       z-index: 20;
     }
 
@@ -260,6 +272,8 @@
       border: 2px solid rgba(255, 255, 255, 0.8);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+      display: block;
+      pointer-events: none;
     }
 
     .canvas-item-placeholder {
@@ -276,6 +290,7 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15),
         inset 0 1px 0 rgba(255, 255, 255, 0.9);
       min-width: 120px;
+      pointer-events: none;
 
       .canvas-item-icon {
         font-size: 2.5rem;
@@ -330,21 +345,23 @@
 
   .visualization-canvas {
     .canvas-item {
-      img {
-        max-width: 130px;
-        max-height: 130px;
-      }
-
-      .canvas-item-placeholder {
-        padding: 0.875rem 1.25rem;
-        min-width: 110px;
-
-        .canvas-item-icon {
-          font-size: 2.25rem;
+      .canvas-item-handle {
+        img {
+          max-width: 130px;
+          max-height: 130px;
         }
 
-        .canvas-item-name {
-          font-size: 0.85rem;
+        .canvas-item-placeholder {
+          padding: 0.875rem 1.25rem;
+          min-width: 110px;
+
+          .canvas-item-icon {
+            font-size: 2.25rem;
+          }
+
+          .canvas-item-name {
+            font-size: 0.85rem;
+          }
         }
       }
     }
@@ -483,21 +500,23 @@
     .canvas-item {
       touch-action: none;
 
-      img {
-        max-width: 100px;
-        max-height: 100px;
-      }
-
-      .canvas-item-placeholder {
-        padding: 0.625rem 1rem;
-        min-width: 90px;
-
-        .canvas-item-icon {
-          font-size: 1.75rem;
+      .canvas-item-handle {
+        img {
+          max-width: 100px;
+          max-height: 100px;
         }
 
-        .canvas-item-name {
-          font-size: 0.75rem;
+        .canvas-item-placeholder {
+          padding: 0.625rem 1rem;
+          min-width: 90px;
+
+          .canvas-item-icon {
+            font-size: 1.75rem;
+          }
+
+          .canvas-item-name {
+            font-size: 0.75rem;
+          }
         }
       }
     }
@@ -549,21 +568,23 @@
 
   .visualization-canvas {
     .canvas-item {
-      img {
-        max-width: 80px;
-        max-height: 80px;
-      }
-
-      .canvas-item-placeholder {
-        padding: 0.5rem 0.875rem;
-        min-width: 80px;
-
-        .canvas-item-icon {
-          font-size: 1.5rem;
+      .canvas-item-handle {
+        img {
+          max-width: 80px;
+          max-height: 80px;
         }
 
-        .canvas-item-name {
-          font-size: 0.7rem;
+        .canvas-item-placeholder {
+          padding: 0.5rem 0.875rem;
+          min-width: 80px;
+
+          .canvas-item-icon {
+            font-size: 1.5rem;
+          }
+
+          .canvas-item-name {
+            font-size: 0.7rem;
+          }
         }
       }
     }

@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
+import Draggable, { DraggableData, DraggableEvent } from "react-draggable";
 import type { Room, CollectionItem } from "../types";
 import "./RoomVisualization.scss";
 
@@ -21,10 +22,20 @@ function RoomVisualization({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const draggedItemRef = useRef<{
-    item: CollectionItem;
-    fromSidebar: boolean;
-  } | null>(null);
+  const [draggedItemFromSidebar, setDraggedItemFromSidebar] =
+    useState<CollectionItem | null>(null);
+  const itemsWithPosition = useMemo(
+    () => items.filter((item) => item.position),
+    [items]
+  );
+
+  const itemRefs = useMemo(() => {
+    const refs: { [key: string]: React.RefObject<HTMLDivElement> } = {};
+    itemsWithPosition.forEach((item) => {
+      refs[item.id] = { current: null };
+    });
+    return refs;
+  }, [itemsWithPosition]);
 
   const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,86 +49,40 @@ function RoomVisualization({
     }
   };
 
-  const getCanvasPosition = (clientX: number, clientY: number) => {
-    if (!canvasRef.current) return null;
-    const rect = canvasRef.current.getBoundingClientRect();
-    return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
+  const handleDragStop = (item: CollectionItem) => {
+    return (_e: DraggableEvent, data: DraggableData) => {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = data.x;
+      const y = data.y;
+
+      if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) {
+        onUpdateItemPosition(item.id, x, y);
+      }
     };
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleSidebarItemDragStart = (item: CollectionItem) => {
+    setDraggedItemFromSidebar(item);
+  };
+
+  const handleSidebarItemDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!draggedItemFromSidebar || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) {
+      onUpdateItemPosition(draggedItemFromSidebar.id, x, y);
+    }
+    setDraggedItemFromSidebar(null);
+  };
+
+  const handleCanvasDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedItemRef.current) return;
-
-    const pos = getCanvasPosition(e.clientX, e.clientY);
-    if (pos && canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      if (
-        pos.x >= 0 &&
-        pos.y >= 0 &&
-        pos.x <= rect.width &&
-        pos.y <= rect.height
-      ) {
-        onUpdateItemPosition(draggedItemRef.current.item.id, pos.x, pos.y);
-      }
-    }
-    draggedItemRef.current = null;
-  };
-
-  const handleSidebarItemDragStart = (
-    e: React.DragEvent,
-    item: CollectionItem
-  ) => {
-    draggedItemRef.current = { item, fromSidebar: true };
-    e.dataTransfer.effectAllowed = "copy";
-  };
-
-  const handleSidebarItemDragEnd = (e: React.DragEvent) => {
-    if (!draggedItemRef.current || !draggedItemRef.current.fromSidebar) {
-      draggedItemRef.current = null;
-      return;
-    }
-
-    const pos = getCanvasPosition(e.clientX, e.clientY);
-    if (pos && canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      if (
-        pos.x >= 0 &&
-        pos.y >= 0 &&
-        pos.x <= rect.width &&
-        pos.y <= rect.height
-      ) {
-        onUpdateItemPosition(draggedItemRef.current.item.id, pos.x, pos.y);
-      }
-    }
-    draggedItemRef.current = null;
-  };
-
-  const handleCanvasItemDragStart = (
-    e: React.DragEvent,
-    item: CollectionItem
-  ) => {
-    draggedItemRef.current = { item, fromSidebar: false };
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleCanvasItemDragEnd = () => {
-    draggedItemRef.current = null;
-  };
-
-  const getItemStyle = (item: CollectionItem) => {
-    if (!item.position) return {};
-    return {
-      left: `${item.position.x}px`,
-      top: `${item.position.y}px`,
-    };
   };
 
   return (
@@ -178,8 +143,7 @@ function RoomVisualization({
                 key={item.id}
                 className="sidebar-item"
                 draggable
-                onDragStart={(e) => handleSidebarItemDragStart(e, item)}
-                onDragEnd={(e) => handleSidebarItemDragEnd(e)}
+                onDragStart={() => handleSidebarItemDragStart(item)}
               >
                 <div className="sidebar-item-image">
                   {item.imageUrl ? (
@@ -203,35 +167,47 @@ function RoomVisualization({
         <div
           ref={canvasRef}
           className="visualization-canvas"
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
+          onDragOver={handleCanvasDragOver}
+          onDrop={handleSidebarItemDrop}
           style={{
             backgroundImage: room.backgroundImage
               ? `url(${room.backgroundImage})`
               : undefined,
           }}
         >
-          {items
-            .filter((item) => item.position)
-            .map((item) => (
-              <div
+          {itemsWithPosition.map((item) => {
+            const nodeRef = itemRefs[item.id];
+            return (
+              <Draggable
                 key={item.id}
-                className="canvas-item"
-                style={getItemStyle(item)}
-                draggable
-                onDragStart={(e) => handleCanvasItemDragStart(e, item)}
-                onDragEnd={handleCanvasItemDragEnd}
+                nodeRef={nodeRef}
+                position={item.position || { x: 0, y: 0 }}
+                onStop={handleDragStop(item)}
+                bounds="parent"
+                handle=".canvas-item-handle"
               >
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} />
-                ) : (
-                  <div className="canvas-item-placeholder">
-                    <span className="canvas-item-icon">📦</span>
-                    <span className="canvas-item-name">{item.name}</span>
+                <div
+                  className="canvas-item"
+                  ref={(node) => {
+                    if (nodeRef) {
+                      nodeRef.current = node;
+                    }
+                  }}
+                >
+                  <div className="canvas-item-handle">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} />
+                    ) : (
+                      <div className="canvas-item-placeholder">
+                        <span className="canvas-item-icon">📦</span>
+                        <span className="canvas-item-name">{item.name}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              </Draggable>
+            );
+          })}
           {!room.backgroundImage && (
             <div className="canvas-placeholder">
               <p>Upload a background image to start</p>

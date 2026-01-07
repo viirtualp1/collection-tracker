@@ -1,17 +1,16 @@
 .room-slide {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(60px) saturate(180%);
   -webkit-backdrop-filter: blur(60px) saturate(180%);
   border-radius: 32px;
   padding: 2.5rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.7);
-  min-height: 500px;
   display: flex;
   flex-direction: column;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
 .room-header {
@@ -34,6 +33,9 @@
     font-size: 2.75rem;
     line-height: 1;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    display: flex;
+    align-items: center;
+    height: 48px;
   }
 
   .room-name {
@@ -43,6 +45,10 @@
     flex: 1;
     letter-spacing: -0.5px;
     line-height: 1.2;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    height: 48px;
   }
 
   .item-count {
@@ -57,12 +63,17 @@
     border: 1px solid rgba(0, 122, 255, 0.2);
     letter-spacing: -0.2px;
     box-shadow: 0 2px 8px rgba(0, 122, 255, 0.15);
+    display: flex;
+    align-items: center;
+    height: 36px;
+    white-space: nowrap;
   }
 
   .room-header-actions {
     display: flex;
     gap: 0.75rem;
     align-items: center;
+    height: 48px;
   }
 
   .room-action-button {
@@ -84,6 +95,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
     letter-spacing: -0.2px;
     white-space: nowrap;
+    height: 48px;
 
     &:hover {
       background: rgba(255, 255, 255, 0.85);
@@ -98,9 +110,15 @@
     }
 
     &.edit {
-      padding: 0.625rem;
-      min-width: 44px;
-      font-size: 1.1rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 18px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      height: 48px;
+
+      &:hover {
+        transform: translateY(-1px) scale(1.02);
+      }
     }
 
     &.visualize {
@@ -127,6 +145,7 @@
       min-width: 44px;
       font-size: 1.3rem;
       font-weight: 300;
+      height: 48px;
 
       &:hover {
         box-shadow: 0 6px 20px rgba(0, 122, 255, 0.4),
@@ -140,8 +159,32 @@
 .items-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 280px;
   gap: 1.5rem;
   flex: 1;
+  overflow-y: auto;
+  max-height: 100%;
+  padding-right: 0.5rem;
+  align-content: flex-start;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
 }
 
 .add-item-card {
@@ -165,8 +208,11 @@
   font-size: 1.1rem;
   font-weight: 500;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 220px;
+  min-height: 280px;
+  height: 280px;
+  max-height: 280px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  align-self: start;
 
   .plus-icon {
     font-size: 3.5rem;
@@ -182,13 +228,11 @@
       rgba(88, 86, 214, 0.15) 100%
     );
     border-color: rgba(0, 122, 255, 0.5);
-    transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(0, 122, 255, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.8);
   }
 
   &:active {
-    transform: translateY(0);
     transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
@@ -226,12 +270,32 @@
     .room-action-button {
       padding: 0.5rem 1rem;
       font-size: 0.875rem;
+      height: 40px;
 
       &.edit,
       &.add {
         padding: 0.5rem;
         min-width: 40px;
+        height: 40px;
       }
+    }
+
+    .room-icon {
+      height: 40px;
+      font-size: 2.25rem;
+    }
+
+    .room-name {
+      height: 40px;
+      font-size: 1.75rem;
+    }
+
+    .item-count {
+      height: 32px;
+    }
+
+    .room-header-actions {
+      height: 40px;
     }
   }
 

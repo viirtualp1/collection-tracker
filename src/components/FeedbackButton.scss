@@ -1,31 +1,38 @@
 .feedback-button {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
-  color: white;
-  border: none;
-  font-size: 1.5rem;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #1d1d1f;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 999;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  &::before {
+    content: "💬";
+    font-size: 1.1rem;
+  }
 
   &:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 12px 32px rgba(0, 122, 255, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.85);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 1);
   }
 
   &:active {
-    transform: translateY(0) scale(0.98);
+    transform: translateY(0);
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
@@ -42,7 +49,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  z-index: 1001;
+  z-index: 10000;
   animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -229,17 +236,8 @@
 }
 
 @media (max-width: 768px) {
-  .feedback-button {
-    bottom: 1.5rem;
-    right: 1.5rem;
-    width: 48px;
-    height: 48px;
-    font-size: 1.25rem;
-  }
-
   .feedback-modal {
     max-width: 100%;
     border-radius: 28px;
   }
 }
-
