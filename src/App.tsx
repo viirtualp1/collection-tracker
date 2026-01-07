@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Room, CollectionItem } from "./types";
 import RoomSlide from "./components/RoomSlide";
 import ItemModal from "./components/ItemModal";
@@ -27,46 +27,7 @@ function App() {
   const [isVisualizationMode, setIsVisualizationMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const session = await authService.getSession();
-        if (session?.user) {
-          setUser(session.user);
-        }
-      } catch (err) {
-        console.error("Auth error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkUser();
-
-    const unsubscribe = authService.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        setUser(session.user);
-        await loadData(session.user.id);
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        setRooms([]);
-        setItems([]);
-        setCurrentRoomIndex(0);
-      } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        setUser(session.user);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      loadData(user.id);
-    }
-  }, [user]);
-
-  const loadData = async (userId: string) => {
+  const loadData = useCallback(async (userId: string) => {
     try {
       setError(null);
       const [roomsData, itemsData] = await Promise.all([
@@ -77,14 +38,15 @@ function App() {
       setRooms(roomsData);
       setItems(itemsData);
 
-      if (roomsData.length > 0 && currentRoomIndex >= roomsData.length) {
-        setCurrentRoomIndex(0);
-      }
+      setCurrentRoomIndex((prev) => {
+        if (roomsData.length === 0) return 0;
+        return prev >= roomsData.length ? 0 : prev;
+      });
     } catch (err) {
       console.error("Error loading data:", err);
       setError(err instanceof Error ? err.message : "Failed to load data");
     }
-  };
+  }, []);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -117,13 +79,13 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadData]);
 
   useEffect(() => {
     if (user) {
       loadData(user.id);
     }
-  }, [user]);
+  }, [user, loadData]);
 
   const handleAuthSuccess = async () => {
     const currentUser = await authService.getCurrentUser();
@@ -497,6 +459,7 @@ function App() {
 
       {isModalOpen && (
         <ItemModal
+          key={editingItem?.id ?? "new"}
           item={editingItem}
           onSave={handleSaveItem}
           onDelete={editingItem ? handleDeleteItem : undefined}
@@ -506,6 +469,7 @@ function App() {
 
       {isRoomModalOpen && (
         <RoomModal
+          key={editingRoom?.id ?? "new"}
           room={editingRoom}
           onSave={handleSaveRoom}
           onDelete={editingRoom ? handleDeleteRoom : undefined}

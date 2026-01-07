@@ -10,21 +10,10 @@ interface RoomModalProps {
 }
 
 function RoomModal({ room, onSave, onDelete, onClose }: RoomModalProps) {
-  const [name, setName] = useState("");
-  const [icon, setIcon] = useState("");
+  const [name, setName] = useState(() => room?.name ?? "");
+  const [icon, setIcon] = useState(() => room?.icon ?? "");
   const [errors, setErrors] = useState<{ name?: string }>({});
   const modalRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (room) {
-      setName(room.name);
-      setIcon(room.icon || "");
-    } else {
-      setName("");
-      setIcon("");
-    }
-    setErrors({});
-  }, [room]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

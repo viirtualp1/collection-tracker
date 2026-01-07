@@ -10,26 +10,13 @@ interface ItemModalProps {
 }
 
 function ItemModal({ item, onSave, onDelete, onClose }: ItemModalProps) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [name, setName] = useState(() => item?.name ?? "");
+  const [description, setDescription] = useState(() => item?.description ?? "");
+  const [imageUrl, setImageUrl] = useState(() => item?.imageUrl ?? "");
   const [errors, setErrors] = useState<{ name?: string; imageUrl?: string }>(
     {}
   );
   const modalRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (item) {
-      setName(item.name);
-      setDescription(item.description);
-      setImageUrl(item.imageUrl || "");
-    } else {
-      setName("");
-      setDescription("");
-      setImageUrl("");
-    }
-    setErrors({});
-  }, [item]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
