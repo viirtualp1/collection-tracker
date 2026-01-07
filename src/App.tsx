@@ -1,40 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Room, CollectionItem } from "./types";
 import RoomSlide from "./components/RoomSlide";
 import ItemModal from "./components/ItemModal";
 import RoomModal from "./components/RoomModal";
 import RoomOrderModal from "./components/RoomOrderModal";
 import RoomVisualization from "./components/RoomVisualization";
+import Auth from "./components/Auth";
+import FeedbackButton from "./components/FeedbackButton";
+import { authService } from "./lib/auth";
+import { roomsService } from "./lib/rooms";
+import { itemsService } from "./lib/items";
+import type { User } from "@supabase/supabase-js";
 import "./App.scss";
 
-const initialRooms: Room[] = [
-  { id: "1", name: "Living Room", icon: "🛋️", order: 0 },
-  { id: "2", name: "Bedroom", icon: "🛏️", order: 1 },
-  { id: "3", name: "Kitchen", icon: "🍳", order: 2 },
-];
-
-const initialItems: CollectionItem[] = [
-  {
-    id: "1",
-    name: "Vintage Record Player",
-    description: "Classic 1970s turntable",
-    roomId: "1",
-    createdAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Comic Book Collection",
-    description: "Marvel series from the 90s",
-    roomId: "2",
-    createdAt: new Date(),
-  },
-];
-
 function App() {
-  const [rooms, setRooms] = useState<Room[]>(
-    [...initialRooms].sort((a, b) => a.order - b.order)
-  );
-  const [items, setItems] = useState<CollectionItem[]>(initialItems);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [items, setItems] = useState<CollectionItem[]>([]);
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CollectionItem | null>(null);
@@ -42,6 +25,117 @@ function App() {
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [isRoomOrderModalOpen, setIsRoomOrderModalOpen] = useState(false);
   const [isVisualizationMode, setIsVisualizationMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const session = await authService.getSession();
+        if (session?.user) {
+          setUser(session.user);
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
+
+    const unsubscribe = authService.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        setUser(session.user);
+        await loadData(session.user.id);
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setRooms([]);
+        setItems([]);
+        setCurrentRoomIndex(0);
+      } else if (event === "TOKEN_REFRESHED" && session?.user) {
+        setUser(session.user);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadData(user.id);
+    }
+  }, [user]);
+
+  const loadData = async (userId: string) => {
+    try {
+      setError(null);
+      const [roomsData, itemsData] = await Promise.all([
+        roomsService.getAll(userId),
+        itemsService.getAll(userId),
+      ]);
+
+      setRooms(roomsData);
+      setItems(itemsData);
+
+      if (roomsData.length > 0 && currentRoomIndex >= roomsData.length) {
+        setCurrentRoomIndex(0);
+      }
+    } catch (err) {
+      console.error("Error loading data:", err);
+      setError(err instanceof Error ? err.message : "Failed to load data");
+    }
+  };
+
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const session = await authService.getSession();
+        if (session?.user) {
+          setUser(session.user);
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
+
+    const unsubscribe = authService.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        setUser(session.user);
+        await loadData(session.user.id);
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setRooms([]);
+        setItems([]);
+        setCurrentRoomIndex(0);
+      } else if (event === "TOKEN_REFRESHED" && session?.user) {
+        setUser(session.user);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadData(user.id);
+    }
+  }, [user]);
+
+  const handleAuthSuccess = async () => {
+    const currentUser = await authService.getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
+      await loadData(currentUser.id);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await authService.signOut();
+  };
 
   const sortedRooms = [...rooms].sort((a, b) => a.order - b.order);
   const currentRoom = sortedRooms[currentRoomIndex];
@@ -71,32 +165,41 @@ function App() {
     setIsModalOpen(true);
   };
 
-  const handleSaveItem = (
+  const handleSaveItem = async (
     item: Omit<CollectionItem, "id" | "createdAt" | "roomId">
   ) => {
-    if (editingItem) {
-      // Edit existing item
-      setItems((prev) =>
-        prev.map((i) => (i.id === editingItem.id ? { ...i, ...item } : i))
-      );
-    } else {
-      // Add new item
-      const newItem: CollectionItem = {
-        ...item,
-        id: Date.now().toString(),
-        roomId: currentRoom.id,
-        createdAt: new Date(),
-      };
-      setItems((prev) => [...prev, newItem]);
+    if (!user || !currentRoom) return;
+
+    try {
+      if (editingItem) {
+        const updated = await itemsService.update(editingItem.id, item, user.id);
+        setItems((prev) =>
+          prev.map((i) => (i.id === editingItem.id ? updated : i))
+        );
+      } else {
+        const newItem = await itemsService.create(item, user.id, currentRoom.id);
+        setItems((prev) => [...prev, newItem]);
+      }
+      setIsModalOpen(false);
+      setEditingItem(null);
+    } catch (err) {
+      console.error("Error saving item:", err);
+      setError(err instanceof Error ? err.message : "Failed to save item");
     }
-    setIsModalOpen(false);
-    setEditingItem(null);
   };
 
-  const handleDeleteItem = (itemId: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== itemId));
-    setIsModalOpen(false);
-    setEditingItem(null);
+  const handleDeleteItem = async (itemId: string) => {
+    if (!user) return;
+
+    try {
+      await itemsService.delete(itemId, user.id);
+      setItems((prev) => prev.filter((i) => i.id !== itemId));
+      setIsModalOpen(false);
+      setEditingItem(null);
+    } catch (err) {
+      console.error("Error deleting item:", err);
+      setError(err instanceof Error ? err.message : "Failed to delete item");
+    }
   };
 
   const handleCloseModal = () => {
@@ -114,60 +217,83 @@ function App() {
     setIsRoomModalOpen(true);
   };
 
-  const handleSaveRoom = (roomData: Omit<Room, "id" | "order">) => {
-    if (editingRoom) {
-      setRooms((prev) =>
-        prev.map((r) => (r.id === editingRoom.id ? { ...r, ...roomData } : r))
-      );
-    } else {
-      const maxOrder = Math.max(...rooms.map((r) => r.order), -1);
-      const newRoom: Room = {
-        ...roomData,
-        id: Date.now().toString(),
-        order: maxOrder + 1,
-      };
-      setRooms((prev) => {
-        const updated = [...prev, newRoom];
-        const sorted = [...updated].sort((a, b) => a.order - b.order);
-        const newIndex = sorted.findIndex((r) => r.id === newRoom.id);
-        if (newIndex !== -1) {
-          setCurrentRoomIndex(newIndex);
-        }
-        return updated;
-      });
+  const handleSaveRoom = async (roomData: Omit<Room, "id" | "order">) => {
+    if (!user) return;
+
+    try {
+      if (editingRoom) {
+        const updated = await roomsService.update(
+          editingRoom.id,
+          roomData,
+          user.id
+        );
+        setRooms((prev) =>
+          prev.map((r) => (r.id === editingRoom.id ? updated : r))
+        );
+      } else {
+        const newRoom = await roomsService.create(roomData, user.id);
+        setRooms((prev) => {
+          const updated = [...prev, newRoom];
+          const sorted = [...updated].sort((a, b) => a.order - b.order);
+          const newIndex = sorted.findIndex((r) => r.id === newRoom.id);
+          if (newIndex !== -1) {
+            setCurrentRoomIndex(newIndex);
+          }
+          return updated;
+        });
+      }
+      setIsRoomModalOpen(false);
+      setEditingRoom(null);
+    } catch (err) {
+      console.error("Error saving room:", err);
+      setError(err instanceof Error ? err.message : "Failed to save room");
     }
-    setIsRoomModalOpen(false);
-    setEditingRoom(null);
   };
 
-  const handleDeleteRoom = (roomId: string) => {
-    setRooms((prev) => {
-      const filtered = prev.filter((r) => r.id !== roomId);
-      const sorted = [...filtered].sort((a, b) => a.order - b.order);
-      if (currentRoomIndex >= sorted.length && sorted.length > 0) {
-        setCurrentRoomIndex(sorted.length - 1);
-      } else if (sorted.length === 0) {
-        setCurrentRoomIndex(0);
-      }
-      return filtered;
-    });
-    setItems((prev) => prev.filter((i) => i.roomId !== roomId));
-    setIsRoomModalOpen(false);
-    setEditingRoom(null);
+  const handleDeleteRoom = async (roomId: string) => {
+    if (!user) return;
+
+    try {
+      await roomsService.delete(roomId, user.id);
+      setRooms((prev) => {
+        const filtered = prev.filter((r) => r.id !== roomId);
+        const sorted = [...filtered].sort((a, b) => a.order - b.order);
+        if (currentRoomIndex >= sorted.length && sorted.length > 0) {
+          setCurrentRoomIndex(sorted.length - 1);
+        } else if (sorted.length === 0) {
+          setCurrentRoomIndex(0);
+        }
+        return filtered;
+      });
+      setItems((prev) => prev.filter((i) => i.roomId !== roomId));
+      setIsRoomModalOpen(false);
+      setEditingRoom(null);
+    } catch (err) {
+      console.error("Error deleting room:", err);
+      setError(err instanceof Error ? err.message : "Failed to delete room");
+    }
   };
 
   const handleEditOrder = () => {
     setIsRoomOrderModalOpen(true);
   };
 
-  const handleSaveRoomOrder = (reorderedRooms: Room[]) => {
-    setRooms(reorderedRooms);
-    const currentRoomId = currentRoom?.id;
-    if (currentRoomId) {
-      const newIndex = reorderedRooms.findIndex((r) => r.id === currentRoomId);
-      if (newIndex !== -1) {
-        setCurrentRoomIndex(newIndex);
+  const handleSaveRoomOrder = async (reorderedRooms: Room[]) => {
+    if (!user) return;
+
+    try {
+      const updated = await roomsService.updateOrder(reorderedRooms, user.id);
+      setRooms(updated);
+      const currentRoomId = currentRoom?.id;
+      if (currentRoomId) {
+        const newIndex = updated.findIndex((r) => r.id === currentRoomId);
+        if (newIndex !== -1) {
+          setCurrentRoomIndex(newIndex);
+        }
       }
+    } catch (err) {
+      console.error("Error updating room order:", err);
+      setError(err instanceof Error ? err.message : "Failed to update order");
     }
   };
 
@@ -184,38 +310,82 @@ function App() {
     setIsVisualizationMode(false);
   };
 
-  const handleUpdateItemPosition = (itemId: string, x: number, y: number) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, position: { x, y } } : item
-      )
-    );
+  const handleUpdateItemPosition = async (
+    itemId: string,
+    x: number,
+    y: number
+  ) => {
+    if (!user) return;
+
+    try {
+      const updated = await itemsService.updatePosition(
+        itemId,
+        { x, y },
+        user.id
+      );
+      setItems((prev) =>
+        prev.map((item) => (item.id === itemId ? updated : item))
+      );
+    } catch (err) {
+      console.error("Error updating item position:", err);
+    }
   };
 
-  const handleUpdateRoomBackground = (backgroundImage: string) => {
-    if (!currentRoom) return;
-    setRooms((prev) =>
-      prev.map((room) =>
-        room.id === currentRoom.id ? { ...room, backgroundImage } : room
-      )
-    );
+  const handleUpdateRoomBackground = async (backgroundImage: string) => {
+    if (!currentRoom || !user) return;
+
+    try {
+      const updated = await roomsService.update(
+        currentRoom.id,
+        { backgroundImage },
+        user.id
+      );
+      setRooms((prev) =>
+        prev.map((room) => (room.id === currentRoom.id ? updated : room))
+      );
+    } catch (err) {
+      console.error("Error updating room background:", err);
+    }
   };
+
+  if (loading) {
+    return (
+      <main className="app">
+        <div className="empty-state">
+          <h2>Loading...</h2>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return <Auth onAuthSuccess={handleAuthSuccess} />;
+  }
 
   if (isVisualizationMode && currentRoom) {
     return (
-      <RoomVisualization
-        room={currentRoom}
-        items={currentRoomItems}
-        onBack={handleBackFromVisualization}
-        onUpdateItemPosition={handleUpdateItemPosition}
-        onUpdateRoomBackground={handleUpdateRoomBackground}
-      />
+      <>
+        <RoomVisualization
+          room={currentRoom}
+          items={currentRoomItems}
+          onBack={handleBackFromVisualization}
+          onUpdateItemPosition={handleUpdateItemPosition}
+          onUpdateRoomBackground={handleUpdateRoomBackground}
+        />
+        <FeedbackButton />
+      </>
     );
   }
 
   if (!currentRoom) {
     return (
       <main className="app">
+        {error && (
+          <div className="error-banner" role="alert">
+            {error}
+            <button onClick={() => setError(null)}>×</button>
+          </div>
+        )}
         <div className="empty-state">
           <h2>No rooms yet</h2>
           <button className="add-room-button" onClick={handleAddRoom}>
@@ -230,12 +400,29 @@ function App() {
             onClose={handleCloseRoomModal}
           />
         )}
+        <FeedbackButton />
       </main>
     );
   }
 
   return (
     <main className="app">
+      {error && (
+        <div className="error-banner" role="alert">
+          {error}
+          <button onClick={() => setError(null)}>×</button>
+        </div>
+      )}
+
+      <div className="app-header">
+        <div className="user-info">
+          <span className="user-email">{user.email}</span>
+          <button className="sign-out-button" onClick={handleSignOut}>
+            Sign Out
+          </button>
+        </div>
+      </div>
+
       <div className="slider-container">
         <RoomSlide
           room={currentRoom}
@@ -333,6 +520,8 @@ function App() {
           onClose={() => setIsRoomOrderModalOpen(false)}
         />
       )}
+
+      <FeedbackButton />
     </main>
   );
 }
