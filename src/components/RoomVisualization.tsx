@@ -1,5 +1,8 @@
-import { useRef, useState, useMemo } from "react";
-import Draggable, { DraggableData, DraggableEvent } from "react-draggable";
+import { useRef, useState, useMemo, createRef } from "react";
+import Draggable, {
+  type DraggableData,
+  type DraggableEvent,
+} from "react-draggable";
 import type { Room, CollectionItem } from "../types";
 import "./RoomVisualization.scss";
 
@@ -30,9 +33,9 @@ function RoomVisualization({
   );
 
   const itemRefs = useMemo(() => {
-    const refs: { [key: string]: React.RefObject<HTMLDivElement> } = {};
+    const refs: { [key: string]: React.RefObject<HTMLDivElement | null> } = {};
     itemsWithPosition.forEach((item) => {
-      refs[item.id] = { current: null };
+      refs[item.id] = createRef<HTMLDivElement>();
     });
     return refs;
   }, [itemsWithPosition]);
@@ -190,7 +193,7 @@ function RoomVisualization({
                   className="canvas-item"
                   ref={(node) => {
                     if (nodeRef) {
-                      nodeRef.current = node;
+                      nodeRef.current = node as HTMLDivElement | null;
                     }
                   }}
                 >
