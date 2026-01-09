@@ -28,6 +28,43 @@ function App() {
   const [isVisualizationMode, setIsVisualizationMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const updateDocumentTitle = () => {
+      if (loading) {
+        document.title = "Loading... | Collection Tracker";
+        return;
+      }
+
+      if (!user) {
+        document.title =
+          "Collection Tracker - Organize Your Collections by Rooms";
+        return;
+      }
+
+      if (isVisualizationMode && currentRoom) {
+        document.title = `${currentRoom.name} - Visual Mode | Collection Tracker`;
+        return;
+      }
+
+      if (currentRoom) {
+        const itemCount = currentRoomItems.length;
+        document.title = `${currentRoom.name} (${itemCount} items) | Collection Tracker`;
+        return;
+      }
+
+      document.title =
+        "Collection Tracker - Organize Your Collections by Rooms";
+    };
+
+    updateDocumentTitle();
+  }, [
+    loading,
+    user,
+    currentRoom,
+    currentRoomItems.length,
+    isVisualizationMode,
+  ]);
+
   const loadData = useCallback(async (userId: string) => {
     try {
       setError(null);
