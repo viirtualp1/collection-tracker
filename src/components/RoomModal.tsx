@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { Room } from "../types";
+import EmojiPicker from "./EmojiPicker";
 import "./ItemModal.scss";
 
 interface RoomModalProps {
@@ -28,14 +29,14 @@ function RoomModal({ room, onSave, onDelete, onClose }: RoomModalProps) {
 
   useEffect(() => {
     if (modalRef.current) {
-      const firstInput = modalRef.current.querySelector('input') as HTMLElement;
+      const firstInput = modalRef.current.querySelector("input") as HTMLElement;
       firstInput?.focus();
     }
   }, []);
 
   const validateForm = () => {
     const newErrors: { name?: string } = {};
-    
+
     if (!name.trim()) {
       newErrors.name = "Name is required";
     }
@@ -56,18 +57,36 @@ function RoomModal({ room, onSave, onDelete, onClose }: RoomModalProps) {
 
   const handleDelete = () => {
     if (!room || !onDelete) return;
-    
-    if (window.confirm("Are you sure you want to delete this room? All items in this room will be deleted. This action cannot be undone.")) {
+
+    if (
+      window.confirm(
+        "Are you sure you want to delete this room? All items in this room will be deleted. This action cannot be undone."
+      )
+    ) {
       onDelete(room.id);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} ref={modalRef}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
+      >
         <div className="modal-header">
           <h2 id="modal-title">{room ? "Edit Room" : "Add New Room"}</h2>
-          <button className="close-button" onClick={onClose} aria-label="Close modal">
+          <button
+            className="close-button"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
             ×
           </button>
         </div>
@@ -98,14 +117,7 @@ function RoomModal({ room, onSave, onDelete, onClose }: RoomModalProps) {
 
             <div className="form-group">
               <label htmlFor="icon">Icon (emoji)</label>
-              <input
-                type="text"
-                id="icon"
-                value={icon}
-                onChange={(e) => setIcon(e.target.value)}
-                placeholder="🏠"
-                maxLength={2}
-              />
+              <EmojiPicker id="icon" value={icon} onChange={setIcon} />
             </div>
           </form>
         </div>
@@ -121,11 +133,7 @@ function RoomModal({ room, onSave, onDelete, onClose }: RoomModalProps) {
             </button>
           )}
           <div className="right-actions">
-            <button
-              type="button"
-              className="cancel-button"
-              onClick={onClose}
-            >
+            <button type="button" className="cancel-button" onClick={onClose}>
               Cancel
             </button>
             <button
@@ -133,7 +141,9 @@ function RoomModal({ room, onSave, onDelete, onClose }: RoomModalProps) {
               className="save-button"
               onClick={(e) => {
                 e.preventDefault();
-                const form = e.currentTarget.closest('.modal-content')?.querySelector('form') as HTMLFormElement;
+                const form = e.currentTarget
+                  .closest(".modal-content")
+                  ?.querySelector("form") as HTMLFormElement;
                 if (form) {
                   form.requestSubmit();
                 }
